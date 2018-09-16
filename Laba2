@@ -1,0 +1,82 @@
+#include <msp430.h>
+
+#define DELTA 6250;
+
+/*  Глобальные переменные  */
+volatile short counter = 0;
+volatile short  = 1;
+bool led1;
+
+
+/*  Объявление функций  */
+
+// LED1: port - P1; bit - 0
+// LED2: port - P8; bit - 1
+// S2: port - P2; bit - 2
+// TA2:  port - ; bit -
+
+// PxSEL – выбор функции вывода: 0 – I/O, 1 – периферия;
+// PxREN – разрешение подтягивающего резистора;
+// PxIES – выбор направления перепада для генерации запроса на прерывание: 0 – по фронту, 1 – по спаду;
+// PxIE – разрешение прерывания;
+// PxIFG – флаг прерывания.
+
+void main(void) {
+        WDTCTL = WDTPW + WDTHOLD;    // отключаем сторожевой таймер
+
+		led1 = true;
+
+		P1SEL &= ~BIT0;							
+
+		P2REN |= BIT2;
+
+		P2OUT |= BIT2;
+
+		P1DIR |= BIT0;                          // P1.0 output 	LED1
+		P8DIR |= BIT1;							// P8.1 output  LED2
+		P2DIR &= ~BIT2;							// P2.2 input   S2
+
+
+        P2IE |= BIT2;    						// interruptions are awailable now
+        P2IES |= BIT2;
+        P2IFG &= ~BIT2;
+
+        TA2CCTL0 = CCIE; // Enable counter interrupt on counter compare register 0
+        TA2CTL = TASSEL__SMCLK +ID__2 + MC__CONTINOUS; // Use the SMCLK to clock the counter, SMCLK/8, count up mode 8tick/s
+        
+        __bis_SR_register(LPM0_bits + GIE);     // Turn on 'Save power' mode
+
+        __no_operation();
+
+        for(;;) { // wait for interrupt
+        }
+}
+
+
+#pragma vector=TIMER2_A0_VECTOR
+__interrupt void Timer_A (void){
+	counter ++;
+	if (counter == 8 * limit) {					// каждую секунду или limit секунд
+		counter = 0;
+
+		if (led1)
+		{
+			P8OUT &= ~BIT1;
+			P1OUT |= BIT0;
+		} else {
+			P1OUT &= ~BIT0;
+			P8OUT |= BIT1;
+		}
+	}
+}
+
+#pragma vector = PORT2_VECTOR
+__interrupt void PORT2_ISR(void){
+    if (limit < 6) {
+		limit++;
+	}
+	else {
+		limit = 1;
+	}
+    P2IFG &= ~BIT2;
+}
