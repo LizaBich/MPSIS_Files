@@ -1,0 +1,54 @@
+#include <msp430.h> 
+
+/*
+ * main.c
+ */
+void blink() { // ìèãàíèå
+    int i;
+    P8OUT |= BIT1;
+    for ( i = 0 ; i < 10000; i++);
+    P8OUT &= !(BIT1);
+    for ( i = 0 ; i < 10000; i++);
+}
+
+int main(void) {
+    WDTCTL = WDTPW | WDTHOLD;	// Stop watchdog timer
+    P1DIR &= !(BIT7);
+    P2DIR &= !(BIT2);
+
+    P8DIR |= BIT1;
+
+    P1OUT |= BIT7;
+    P1REN |= BIT7;
+
+    P2OUT |= BIT2;
+    P2REN |= BIT2;
+
+    volatile int i;
+    while(1)
+    {
+        while((P1IN & BIT7) && (P2IN & BIT2)) {} // ïîêà äâå êíîïêè îòæàòû
+
+        for (i = 0 ; i < 400; i++);
+
+        while(!(P1IN & BIT7) || !(P2IN & BIT2)) { // ïîêà íàæàòû
+            blink();
+        }
+
+        for (i = 0 ; i < 100; i++);
+
+        while((P1IN & BIT7) && (P2IN & BIT2)) { // ïîêà äâå êíîïêè îòæàòû
+            blink();
+        }
+
+        for (i = 0 ; i < 400; i++);
+
+        while(!(P1IN & BIT7) || !(P2IN & BIT2)) {}
+
+        for (i = 0 ; i < 400; i++);
+
+        P8OUT &= !(BIT1); // switch off
+    }
+    
+	return 0;
+}
