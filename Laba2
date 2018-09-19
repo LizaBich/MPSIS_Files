@@ -4,8 +4,8 @@
 
 /*  Глобальные переменные  */
 volatile short counter = 0;
-volatile short  = 1;
-bool led1;
+volatile short limit = 1;
+volatile short led1 = 1;
 
 
 /*  Объявление функций  */
@@ -24,8 +24,6 @@ bool led1;
 void main(void) {
         WDTCTL = WDTPW + WDTHOLD;    // отключаем сторожевой таймер
 
-		led1 = true;
-
 		P1SEL &= ~BIT0;							
 
 		P2REN |= BIT2;
@@ -42,41 +40,41 @@ void main(void) {
         P2IFG &= ~BIT2;
 
         TA2CCTL0 = CCIE; // Enable counter interrupt on counter compare register 0
-        TA2CTL = TASSEL__SMCLK +ID__2 + MC__CONTINOUS; // Use the SMCLK to clock the counter, SMCLK/8, count up mode 8tick/s
+        TA2CTL = TASSEL__SMCLK +ID__1 + MC__CONTINOUS; // Use the SMCLK to clock the counter, SMCLK/8, count up mode 8tick/s
         
         __bis_SR_register(LPM0_bits + GIE);     // Turn on 'Save power' mode
 
         __no_operation();
-
-        for(;;) { // wait for interrupt
-        }
 }
 
 
 #pragma vector=TIMER2_A0_VECTOR
 __interrupt void Timer_A (void){
 	counter ++;
-	if (counter == 8 * limit) {					// каждую секунду или limit секунд
+	if (counter == 4 * limit) {					// каждую секунду или limit секунд
 		counter = 0;
 
-		if (led1)
+		if (led1 == 1)
 		{
-			P8OUT &= ~BIT1;
-			P1OUT |= BIT0;
-		} else {
-			P1OUT &= ~BIT0;
 			P8OUT |= BIT1;
+			P1OUT &= ~BIT0;
+			led1 = 0;
+		} else {
+			P1OUT |= BIT0;
+			P8OUT &= ~BIT1;
+			led1 = 1;
 		}
 	}
 }
 
 #pragma vector = PORT2_VECTOR
 __interrupt void PORT2_ISR(void){
-    if (limit < 6) {
+    if (limit < 4) {
 		limit++;
 	}
 	else {
 		limit = 1;
+		counter = 0;
 	}
     P2IFG &= ~BIT2;
 }
