@@ -10,6 +10,7 @@ volatile short upCounter = 0;
 void SwitchLed(short ledNumber, short mode); // 0 - turn off, 1 - turn on
 void SwitchLPM1(); 
 void SwitchVcoreMode(short isUp, unsigned int level);
+void setFreq();
 
 
 /*  Объявление функций  */
@@ -46,22 +47,22 @@ void main(void) {
 	P2DIR &= ~BIT2;							// P2.2 input   S2
 
 
-    P2IE |= BIT2;    						// interruptions are awailable now
-    P2IES |= BIT2;
-    P2IFG &= ~BIT2;
+    	P2IE |= BIT2;    						// interruptions are awailable now
+    	P2IES |= BIT2;
+    	P2IFG &= ~BIT2;
 
-    TA2CCTL0 = CCIE; // Enable counter interrupt on counter compare register 0
-    TA2CTL = TASSEL__SMCLK +ID__2 + MC__CONTINOUS; // Use the SMCLK to clock the counter, SMCLK/8, count up mode 8tick/s
+    	TA2CCTL0 = CCIE; // Enable counter interrupt on counter compare register 0
+    	TA2CTL = TASSEL__SMCLK +ID__2 + MC__CONTINOUS; // Use the SMCLK to clock the counter, SMCLK/8, count up mode 8tick/s
         
     // __bis_SR_register(LPM0_bits + GIE);     // Turn on 'Save power' mode
 	_enable_interrupt();
-    __no_operation();
+    	__no_operation();
 }
 
 
-#pragma vector=TIMER2_A0_VECTOR
+#pragma vector=TIMER0_A0_VECTOR
 __interrupt void Timer_A(void){
-	
+	P1OUT |= BIT5;
 }
 
 // interrupt handler for S2
@@ -71,8 +72,8 @@ __interrupt void PORT2_ISR(void){
 
 	SwitchLPM1();
 
-    P2IE |= BIT2; 		// enabling interrupt 2nd button
-    P2IFG &= ~BIT2; 	// reseting interrupt 2nd button
+   	P2IE |= BIT2; 		// enabling interrupt 2nd button
+    	P2IFG &= ~BIT2; 	// reseting interrupt 2nd button
 }
 
 // interrupt handler for S1
@@ -80,8 +81,8 @@ __interrupt void PORT2_ISR(void){
 __interrupt void PORT1_ISR(void){
 	P1IE &= ~BIT7;		// disabling interrupts from S1 while processing current interrupt
 
-    P1IE |= BIT7; 		// enabling interrupt 1st button
-    P1IFG &= ~BIT7; 	// reseting interrupt 1st button
+    	P1IE |= BIT7; 		// enabling interrupt 1st button
+    	P1IFG &= ~BIT7; 	// reseting interrupt 1st button
 }
 
 void SwitchLed(short ledNumber, short mode)
@@ -178,4 +179,21 @@ void SwitchVcoreMode(short isUp, unsigned int level)
     	PMMCTL0_L = PMMCOREV0 * level;
     	PMMCTL0_H = 0x00;
 	} 
+}
+
+void setFreq ()
+{
+    	UCSCTL3 |= SELREF__REFOCLK; //set DCO reference = REFo
+    	UCSCTL4 |= SELM__DCOCLK | SELA__DCOCLK; //set MCLK and ACLK to DCOCLK
+
+    	__bis_SR_register(SCG0); // Disable FLL control
+
+    	UCSCTL0 |= DCO0;  // set lowest posible DCOx, MODx
+    	UCSCTL0 |= MOD0;
+
+    	UCSCTL1 = DCORSEL_1; //select DCO range 1(was 3) 0.15 - 3.45MGz;
+
+    	UCSCTL2 = FLLD_1 + 8;
+
+    	__bic_SR_register(SCG0);
 }
